@@ -1,0 +1,140 @@
+{
+    "categories": [
+        {
+            "id": 1,
+            "name": "quex",
+            "color": [
+                8,
+                62,
+                255
+            ],
+            "supercategory": ""
+        }
+    ],
+    "images": [
+        {
+            "id": 25,
+            "width": 1999,
+            "height": 1500,
+            "file_name": "lidianchi_0322.jpg",
+            "license": "",
+            "flickr_url": "",
+            "coco_url": "",
+            "date_captured": ""
+        },
+        {
+            "id": 26,
+            "width": 2000,
+            "height": 1500,
+            "file_name": "lidianchi_0001.jpg",
+            "license": "",
+            "flickr_url": "",
+            "coco_url": "",
+            "date_captured": ""
+        },
+        {
+            "id": 24,
+            "width": 2000,
+            "height": 1499,
+            "file_name": "lidianchi_0157.jpg",
+            "license": "",
+            "flickr_url": "",
+            "coco_url": "",
+            "date_captured": ""
+        }
+    ],
+    "annotations": [
+        {
+            "id": 141,
+            "iscrowd": 0,
+            "image_id": 24,
+            "category_id": 1,
+            "segmentation": [
+                766,
+                564,
+                758,
+                825,
+                1179,
+                830,
+                1153,
+                556
+            ],
+            "area": 108083.5,
+            "bbox": [
+                758,
+                556,
+                421,
+                274
+            ]
+        },
+        {
+            "id": 142,
+            "iscrowd": 0,
+            "image_id": 25,
+            "category_id": 1,
+            "segmentation": [
+                32,
+                643,
+                53,
+                872,
+                506,
+                859,
+                511,
+                609
+            ],
+            "area": 111795.0,
+            "bbox": [
+                32,
+                609,
+                479,
+                263
+            ]
+        },
+        {
+            "id": 146,
+            "iscrowd": 0,
+            "image_id": 26,
+            "category_id": 1,
+            "segmentation": [
+                962,
+                550,
+                972,
+                724,
+                1352,
+                704,
+                1349,
+                560
+            ],
+            "area": 61009.0,
+            "bbox": [
+                962,
+                550,
+                390,
+                174
+            ]
+        },
+        {
+            "id": 147,
+            "iscrowd": 0,
+            "image_id": 26,
+            "category_id": 1,
+            "segmentation": [
+                1975,
+                551,
+                1751,
+                551,
+                1753,
+                710,
+                1975,
+                706
+            ],
+            "area": 35013.0,
+            "bbox": [
+                1751,
+                551,
+                224,
+                159
+            ]
+        }
+    ]
+}

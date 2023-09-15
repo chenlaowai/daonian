@@ -1,9 +1,9 @@
 _base_ = [
     '../_base_/models/segformer_mit-b0.py',
-    '../_base_/datasets/defect_datasets_labelygd.py',
+    '../_base_/datasets/datasets_epoch.py',
     '../_base_/default_runtime_seg_epoch.py', '../_base_/schedules/schedule_epoch.py'
 ]
-num_classes = 3
+num_classes = 2
 crop_size = (512, 512)
 data_preprocessor = dict(size=crop_size)
 model = dict(
