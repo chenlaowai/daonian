@@ -1,7 +1,7 @@
 _base_ = [
     '../_base_/models/segformer_mit-b0.py',
-    '../_base_/datasets/datasets_epoch.py',
-    '../_base_/default_runtime_seg_epoch.py', '../_base_/schedules/schedule_epoch.py'
+    '../_base_/datasets/datasets_iter.py',
+    '../_base_/default_runtime_seg_iter.py', '../_base_/schedules/schedule_40k.py'
 ]
 num_classes = 2
 crop_size = (512, 512)
