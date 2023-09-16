@@ -6,6 +6,9 @@ import os.path as osp
 from mmengine.config import Config, DictAction
 from mmengine.runner import Runner
 
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import modules
 
 # TODO: support fuse_conv_bn, visualization, and format_only
 def parse_args():
