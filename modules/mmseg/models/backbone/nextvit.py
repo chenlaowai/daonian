@@ -4,9 +4,11 @@ from functools import partial
 import torch
 import torch.utils.checkpoint as checkpoint
 from einops import rearrange
+from mmseg.models.builder import BACKBONES
+# from mmseg.utils import get_root_logger
 from timm.models.layers import DropPath, trunc_normal_
-from timm.models.registry import register_model
 from torch import nn
+from torch.nn.modules.batchnorm import _BatchNorm
 
 NORM_EPS = 1e-5
 
@@ -177,13 +179,13 @@ class NCB(nn.Module):
             self.is_bn_merged = True
 
     def forward(self, x):
-        x = self.patch_embed(x)  # (1, 64, 128, 128) -> (1, 96, 128, 128)
-        x = x + self.attention_path_dropout(self.mhca(x))  # (1, 96, 128, 128) -> (1, 96, 128, 128)
+        x = self.patch_embed(x)
+        x = x + self.attention_path_dropout(self.mhca(x))
         if not torch.onnx.is_in_onnx_export() and not self.is_bn_merged:
-            out = self.norm(x)  # (1, 96, 128, 128) -> (1, 96, 128, 128)
+            out = self.norm(x)
         else:
             out = x
-        x = x + self.mlp_path_dropout(self.mlp(out))  # (1, 96, 128, 128) -> (1, 96, 128, 128)
+        x = x + self.mlp_path_dropout(self.mlp(out))
         return x
 
 
@@ -224,24 +226,24 @@ class E_MHSA(nn.Module):
 
     def forward(self, x):
         B, N, C = x.shape
-        q = self.q(x)  # (1, 4096, 192) -> (1, 4096, 192)
-        q = q.reshape(B, N, self.num_heads, int(C // self.num_heads)).permute(0, 2, 1, 3)  # (1, 4096, 192) -> (1, 4096, n_h, 192/n_h)
+        q = self.q(x)
+        q = q.reshape(B, N, self.num_heads, int(C // self.num_heads)).permute(0, 2, 1, 3)
 
         if self.sr_ratio > 1:
-            x_ = x.transpose(1, 2)  # (1, 4096, 192) -> (1, 192, 4096)
-            x_ = self.sr(x_)  # (1, 192, 4096) -> (1, 192, 256)
+            x_ = x.transpose(1, 2)
+            x_ = self.sr(x_)
             if not torch.onnx.is_in_onnx_export() and not self.is_bn_merged:
-                x_ = self.norm(x_)  # (1, 192, 256) -> (1, 192, 256)
-            x_ = x_.transpose(1, 2)  # (1, 192, 256) -> (1, 256, 192)
-            k = self.k(x_)  # (1, 256, 192) -> (1, 256, 192)
-            k = k.reshape(B, -1, self.num_heads, int(C // self.num_heads)).permute(0, 2, 3, 1)  # (1, 256, 192) -> (1, n_h, 192/n_h, 256)
-            v = self.v(x_)  # (1, 256, 192) -> (1, 256, 192)
-            v = v.reshape(B, -1, self.num_heads, int(C // self.num_heads)).permute(0, 2, 1, 3)  # (1, 256, 192) -> (1, n_h, 256, 192/n_h)
+                x_ = self.norm(x_)
+            x_ = x_.transpose(1, 2)
+            k = self.k(x_)
+            k = k.reshape(B, -1, self.num_heads, int(C // self.num_heads)).permute(0, 2, 3, 1)
+            v = self.v(x_)
+            v = v.reshape(B, -1, self.num_heads, int(C // self.num_heads)).permute(0, 2, 1, 3)
         else:
-            k = self.k(x)  # (1, 4096, 192) -> (1, 4096, 192)
-            k = k.reshape(B, -1, self.num_heads, int(C // self.num_heads)).permute(0, 2, 3, 1)  # (1, 4096, 192) -> (1, n_h, 192/n_h, 4096)
-            v = self.v(x)  # (1, 4096, 192) -> (1, 4096, 192)
-            v = v.reshape(B, -1, self.num_heads, int(C // self.num_heads)).permute(0, 2, 1, 3)  # (1, 4096, 192) -> (1, n_h, 4096, 192/n_h)
+            k = self.k(x)
+            k = k.reshape(B, -1, self.num_heads, int(C // self.num_heads)).permute(0, 2, 3, 1)
+            v = self.v(x)
+            v = v.reshape(B, -1, self.num_heads, int(C // self.num_heads)).permute(0, 2, 1, 3)
         attn = (q @ k) * self.scale
 
         attn = attn.softmax(dim=-1)
@@ -293,18 +295,18 @@ class NTB(nn.Module):
             self.is_bn_merged = True
 
     def forward(self, x):
-        x = self.patch_embed(x)  # () -> (1, 192, 64, 64)
+        x = self.patch_embed(x)
         B, C, H, W = x.shape
         if not torch.onnx.is_in_onnx_export() and not self.is_bn_merged:
-            out = self.norm1(x)  # (1, 192, 64, 64) -> (1, 192, 64, 64)
+            out = self.norm1(x)
         else:
             out = x
-        out = rearrange(out, "b c h w -> b (h w) c")  # b n c  (1, 192, 64, 64) -> (1, 4096, 192)
-        out = self.mhsa_path_dropout(self.e_mhsa(out))  # (1, 4096, 192) -> (1, 4096, 192)
-        x = x + rearrange(out, "b (h w) c -> b c h w", h=H)  # (1, 192, 64, 64)
+        out = rearrange(out, "b c h w -> b (h w) c")  # b n c
+        out = self.mhsa_path_dropout(self.e_mhsa(out))
+        x = x + rearrange(out, "b (h w) c -> b c h w", h=H)
 
-        out = self.projection(x)  # (1, 192, 64, 64) -> (1, 64, 64, 64)
-        out = out + self.mhca_path_dropout(self.mhca(out))  # (1, 64, 64, 64)
+        out = self.projection(x)
+        out = out + self.mhca_path_dropout(self.mhca(out))
         x = torch.cat([x, out], dim=1)
 
         if not torch.onnx.is_in_onnx_export() and not self.is_bn_merged:
@@ -316,15 +318,16 @@ class NTB(nn.Module):
 
 
 class NextViT(nn.Module):
-    def __init__(self, stem_chs,
-                 depths,
-                 path_dropout,
-                 attn_drop=0, drop=0, num_classes=1000,
+    def __init__(self, stem_chs, depths, path_dropout, attn_drop=0, drop=0, num_classes=1000,
                  strides=[1, 2, 2, 2], sr_ratios=[8, 4, 2, 1], head_dim=32, mix_block_ratio=0.75,
-                 use_checkpoint=False):
+                 use_checkpoint=False, resume='', with_extra_norm=True, frozen_stages=-1,
+                 norm_eval=False, norm_cfg=None,
+                 ):
         super(NextViT, self).__init__()
         self.use_checkpoint = use_checkpoint
-
+        self.frozen_stages = frozen_stages
+        self.with_extra_norm = with_extra_norm
+        self.norm_eval = norm_eval
         self.stage_out_channels = [[96] * (depths[0]),
                                    [192] * (depths[1] - 1) + [256],
                                    [384, 384, 384, 384, 512] * (depths[2] // 5),
@@ -370,22 +373,64 @@ class NextViT(nn.Module):
             idx += numrepeat
         self.features = nn.Sequential(*features)
 
-        self.norm = nn.BatchNorm2d(output_channel, eps=NORM_EPS)
+        self.extra_norm_list = None
+        if with_extra_norm:
+            self.extra_norm_list = []
+            for stage_id in range(len(self.stage_out_channels)):
+                self.extra_norm_list.append(nn.BatchNorm2d(
+                    self.stage_out_channels[stage_id][-1], eps=NORM_EPS))
+            self.extra_norm_list = nn.Sequential(*self.extra_norm_list)
 
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.proj_head = nn.Sequential(
-            nn.Linear(output_channel, num_classes),
-        )
+        self.norm = nn.BatchNorm2d(output_channel, eps=NORM_EPS)
+        #
+        # self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        # self.proj_head = nn.Sequential(
+        #     nn.Linear(output_channel, num_classes),
+        # )
 
         self.stage_out_idx = [sum(depths[:idx + 1]) - 1 for idx in range(len(depths))]
         print('initialize_weights...')
         self._initialize_weights()
+        if resume:
+            self.init_weights(resume)
+        if norm_cfg is not None:
+            self = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self)
+        self._freeze_stages()
+
+    def _freeze_stages(self):
+        if self.frozen_stages > 0:
+            self.stem.eval()
+            for param in self.stem.parameters():
+                param.requires_grad = False
+            for idx, layer in enumerate(self.features):
+                if idx <= self.stage_out_idx[self.frozen_stages - 1]:
+                    layer.eval()
+                    for param in layer.parameters():
+                        param.requires_grad = False
+
+    def train(self, mode=True):
+        """Convert the model into training mode while keep normalization layer
+        freezed."""
+        super(NextViT, self).train(mode)
+        self._freeze_stages()
+        if mode and self.norm_eval:
+            for m in self.modules():
+                # trick: eval have effect on BatchNorm only
+                if isinstance(m, _BatchNorm):
+                    m.eval()
 
     def merge_bn(self):
         self.eval()
         for idx, module in self.named_modules():
             if isinstance(module, NCB) or isinstance(module, NTB):
                 module.merge_bn()
+
+    def init_weights(self, pretrained=None):
+        if isinstance(pretrained, str):
+            print('\n using pretrained model\n')
+            # logger = get_root_logger()
+            checkpoint = torch.load(pretrained, map_location='cpu')['model']
+            self.load_state_dict(checkpoint, strict=False)
 
     def _initialize_weights(self):
         for n, m in self.named_modules():
@@ -402,37 +447,44 @@ class NextViT(nn.Module):
                     nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
-        x = self.stem(x)  # (1, 3, 512, 512) -> (1, 64, 128, 128)
+        outputs = list()
+        x = self.stem(x)
+        stage_id = 0
         for idx, layer in enumerate(self.features):
             if self.use_checkpoint:
                 x = checkpoint.checkpoint(layer, x)
             else:
                 x = layer(x)
-        x = self.norm(x)
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        x = self.proj_head(x)
-        return x
+            if idx == self.stage_out_idx[stage_id]:
+                if self.with_extra_norm:
+                    if stage_id < 3:
+                        x = self.extra_norm_list[stage_id](x)
+                    else:
+                        x = self.norm(x)
+                outputs.append(x)
+                stage_id += 1
+        return outputs
 
 
-@register_model
-def nextvit_small(pretrained=False, pretrained_cfg=None, **kwargs):
-    model = NextViT(stem_chs=[64, 32, 64], depths=[3, 4, 10, 3], path_dropout=0.1, **kwargs)
-    return model
+@BACKBONES.register_module()
+class nextvit_small(NextViT):
+    def __init__(self, resume='', **kwargs):
+        super(nextvit_small, self).__init__(
+            stem_chs=[64, 32, 64], depths=[3, 4, 10, 3], path_dropout=0.2, resume=resume, **kwargs
+        )
 
 
-@register_model
-def nextvit_base(pretrained=False, pretrained_cfg=None, **kwargs):
-    model = NextViT(stem_chs=[64, 32, 64], depths=[3, 4, 20, 3], path_dropout=0.2, **kwargs)
-    return model
+@BACKBONES.register_module()
+class nextvit_base(NextViT):
+    def __init__(self, resume='', **kwargs):
+        super(nextvit_base, self).__init__(
+            stem_chs=[64, 32, 64], depths=[3, 4, 20, 3], path_dropout=0.2, resume=resume, **kwargs
+        )
 
 
-@register_model
-def nextvit_large(pretrained=False, pretrained_cfg=None, **kwargs):
-    model = NextViT(stem_chs=[64, 32, 64], depths=[3, 4, 30, 3], path_dropout=0.2, **kwargs)
-    return model
-
-# model = nextvit_small()
-# x = torch.randn(1, 3, 512, 512)
-# x = model(x)
-# print(x)
+@BACKBONES.register_module()
+class nextvit_large(NextViT):
+    def __init__(self, resume='', **kwargs):
+        super(nextvit_large, self).__init__(
+            stem_chs=[64, 32, 64], depths=[3, 4, 30, 3], path_dropout=0.2, resume=resume, **kwargs
+        )
