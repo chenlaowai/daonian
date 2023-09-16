@@ -1,6 +1,6 @@
 # dataset settings
-dataset_type = 'Ccd6_seg'
-data_root = 'data/7'
+dataset_type = 'DefectSegDataset'
+data_root = 'data/25'
 crop_size = (512, 512)
 train_pipeline = [
     dict(type='LoadImageFromFile'),

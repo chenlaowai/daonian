@@ -7,7 +7,7 @@ num_classes = 2
 crop_size = (512, 512)
 data_preprocessor = dict(size=crop_size)
 model = dict(
-    pretrained='../model_data/mit_b1.pth',
+    pretrained='./model_data/mit_b1.pth',
     data_preprocessor=data_preprocessor,
     backbone=dict(
         embed_dims=64,

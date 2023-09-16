@@ -10,6 +10,9 @@ from mmengine.runner import Runner
 
 from mmseg.registry import RUNNERS
 
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import modules
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a segmentor')

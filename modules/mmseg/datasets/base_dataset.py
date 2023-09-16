@@ -7,8 +7,8 @@ from mmseg.registry import DATASETS as SEGDATASETS
 @SEGDATASETS.register_module()
 class DefectSegDataset(BaseSegDataset):
     METAINFO = dict(
-        classes=('ear_fold_up', 'ear_fold_horizontal', 'ear_unweld'),
-        palette=[[128, 0, 0], [0, 128, 0], [128, 128, 0]]
+        classes=('background', 'tab_question', 'foreign_object', 'metal_chip', 'ear_foldup', 'ear_damaged', 'weld_crack',),
+        palette=[[0, 0, 0], [244, 108, 59], [0, 255, 0], [0, 85, 255], [255, 255, 0], [255, 85, 255], [151, 255, 248],]
     )
     def __init__(self,
                  img_suffix='.jpg',
