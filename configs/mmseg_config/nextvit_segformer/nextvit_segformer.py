@@ -48,43 +48,44 @@ optim_wrapper = dict(
         custom_keys={
             'pos_block': dict(decay_mult=0.),
             'norm': dict(decay_mult=0.),
-            'head': dict(lr_mult=10.)
+            'head': dict(lr_mult=10.),
+            # 'bn': dict(decay_mult=0.0)
         },
     ),
 )
 
-# param_scheduler = [
-#     dict(type='LinearLR',
-#          start_factor=1e-6,
-#          by_epoch=False,
-#          begin=0,
-#          end=1500,
-#          ),
-#     dict(
-#         type='PolyLR',
-#         eta_min=0.0,
-#         power=1.0,
-#         begin=1500,
-#         end=10000,
-#         by_epoch=False,
-#     )
-# ]
 param_scheduler = [
     dict(type='LinearLR',
          start_factor=1e-6,
-         by_epoch=True,
+         by_epoch=False,
          begin=0,
-         end=2,
+         end=1500,
          ),
     dict(
         type='PolyLR',
         eta_min=0.0,
         power=1.0,
-        begin=2,
-        end=12,
-        by_epoch=True,
+        begin=1500,
+        end=40000,
+        by_epoch=False,
     )
 ]
+# param_scheduler = [
+#     dict(type='LinearLR',
+#          start_factor=1e-6,
+#          by_epoch=True,
+#          begin=0,
+#          end=2,
+#          ),
+#     dict(
+#         type='PolyLR',
+#         eta_min=0.0,
+#         power=1.0,
+#         begin=2,
+#         end=12,
+#         by_epoch=True,
+#     )
+# ]
 
 train_dataloader = dict(batch_size=2, num_workers=4)
 val_dataloader = dict(batch_size=1, num_workers=4)
