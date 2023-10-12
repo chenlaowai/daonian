@@ -10,8 +10,10 @@ model = dict(
     data_preprocessor=data_preprocessor,
     # pretrained='open-mmlab://resnet18_v1c',
     # pretrained='../model_data/resnet18.pth',
-    backbone=dict(depth=18,
-                  init_cfg=dict(type='Pretrained', checkpoint='../model_data/resnet18.pth', prefix='backbone.')
+    backbone=dict(
+                  type='ResNetV1c_Plus',
+                  depth=18,
+                  init_cfg=dict(type='Pretrained', checkpoint='../model_data/resnet18v1c.pth', prefix='backbone.')
                   ),
     decode_head=dict(
         c1_in_channels=64,
