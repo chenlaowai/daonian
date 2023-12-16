@@ -44,21 +44,21 @@ def getP(H, W, k):  # H=We
         k[1] = H
     if k[3] == -1:
         k[3] = W
-    ind = np.array([2 * x + 1 for x in range(H)])
-    Dht = [np.sqrt(2) / np.sqrt(H) * np.cos(u * ind * np.pi / (2 * H)) for u in range(H)]
-    Dht = torch.tensor(Dht, dtype=torch.float32)
-    Dht[0, :] = 1 / np.sqrt(H)  # one row reoresent one frequency
-    Dh = Dht.transpose(0, 1).contiguous()  ##one col reoresent one frequency
-    Dh = Dh[:, k[0]:k[1]]
+    ind = np.array([2 * x + 1 for x in range(H)])  # 创建一个包含奇数的数组 ind，这将用于计算 DCT 中的余弦项
+    Dht = [np.sqrt(2) / np.sqrt(H) * np.cos(u * ind * np.pi / (2 * H)) for u in range(H)]  # 计算水平方向上的 DCT 矩阵的各个项
+    Dht = torch.tensor(np.array(Dht), dtype=torch.float32)  # 转换为 PyTorch 张量
+    Dht[0, :] = 1 / np.sqrt(H)  # one row reoresent one frequency  将第一行设置为归一化的常数项
+    Dh = Dht.transpose(0, 1).contiguous()  ##one col reoresent one frequency  转置 Dht，得到水平方向上的 DCT 矩阵 Dh
+    Dh = Dh[:, k[0]:k[1]]  # 仅保留 Dh 中 k[0] 到 k[1] 范围内的列
 
     ind = np.array([2 * x + 1 for x in range(W)])
     Dvt = [np.sqrt(2) / np.sqrt(H) * np.cos(u * ind * np.pi / (2 * W)) for u in range(W)]
-    Dvt = torch.tensor(Dvt, dtype=torch.float32)
+    Dvt = torch.tensor(np.array(Dvt), dtype=torch.float32)
     Dvt[0, :] = 1 / np.sqrt(W)  # one row reoresent one frequency
     Dv = Dvt.transpose(0, 1).contiguous()  ##one col reoresent one frequency
     Dv = Dv[:, k[2]:k[3]]
-    EH = torch.eye(H * W).reshape(H * W, H, W)
-    P = EH.matmul(Dv).transpose(1, 2).matmul(Dh).transpose(1, 2).reshape(H * W, -1)  # (k[1]-k[0])*(k[3]-k[2])
+    EH = torch.eye(H * W).reshape(H * W, H, W)  # 创建一个单位矩阵 EH
+    P = EH.matmul(Dv).transpose(1, 2).matmul(Dh).transpose(1, 2).reshape(H * W, -1)  # (k[1]-k[0])*(k[3]-k[2])  按照一定的顺序与 Dv 和 Dh 相乘，并重新排列得到最终的 P 矩阵，这个矩阵可以用于执行离散余弦变换（DCT）
     return P.cuda()
 
 
@@ -144,7 +144,7 @@ class FreNonLocal(nn.Module):
                 normal_init(self.conv_out.norm, std=std)
 
     def forward(self, x):
-        B, C, H, W = x.size()
+        B, C, H, W = x.size()  # (2, 512, 64, 64)
         if self.P is None:
             P = getP(H, W, self.k)
         else:

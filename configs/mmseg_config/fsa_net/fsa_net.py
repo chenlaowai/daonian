@@ -14,7 +14,7 @@ data_preprocessor = dict(
     seg_pad_val=255)
 norm_cfg = dict(type='SyncBN', requires_grad=True)
 model = dict(
-    type='EncoderDecoder',
+    type='EncoderDecoder_Plus',
     pretrained='open-mmlab://resnet50_v1c',
     backbone=dict(
         type='ResNetV1c',
