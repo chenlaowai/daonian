@@ -4,6 +4,7 @@ import warnings
 import torch
 import torch.nn as nn
 import torch.utils.checkpoint as cp
+from einops import rearrange
 from mmcv.cnn import build_conv_layer, build_norm_layer, build_plugin_layer, ConvModule
 from mmengine.model import BaseModule
 from mmcv.cnn.bricks import DropPath
