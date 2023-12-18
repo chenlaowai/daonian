@@ -30,7 +30,7 @@ model = dict(
         dropout_ratio=0.1,
         reduction=2,
         use_scale=False,
-        mode='dot_product',
+        mode='linsoftmax',
         recurrence=1,
         num_classes=num_classes,
         norm_cfg=dict(type='SyncBN', requires_grad=True),

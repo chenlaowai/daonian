@@ -35,14 +35,14 @@ model = dict(
         dropout_ratio=0.1,
         reduction=2,
         use_scale=False,
-        mode='dot_product',
+        mode='linsoftmax',
         recurrence=1,
         num_classes=num_classes,
         norm_cfg=dict(type='SyncBN', requires_grad=True),
         align_corners=False,
         loss_decode=dict(
             type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
-        k=[0, 5, 0, 5]),
+        k=[0, -1, 0, -1]),
     auxiliary_head=dict(
         type='FCNHead',
         in_channels=1024,
