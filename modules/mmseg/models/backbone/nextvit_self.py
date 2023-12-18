@@ -222,7 +222,7 @@ class NTB(BaseModule):
 
         self.patch_embed = PatchEmbed(in_channels, self.mhsa_out_channels, stride)
         self.norm1_name, norm1 = build_norm_layer(norm_cfg, self.mhsa_out_channels, postfix=1)
-        self.add_module(self.norm_name, norm1)
+        self.add_module(self.norm1_name, norm1)
         self.e_mhsa = E_MHSA(self.mhsa_out_channels, head_dim=head_dim, sr_ratio=sr_ratio, attn_drop=attn_drop, proj_drop=drop)
         self.mhsa_path_dropout = DropPath(path_dropout * mix_block_ratio)
 
@@ -231,7 +231,7 @@ class NTB(BaseModule):
         self.mhca_path_dropout = DropPath(path_dropout * (1 - mix_block_ratio))
 
         self.norm2_name, norm2 = build_norm_layer(norm_cfg, out_channels, postfix=2)
-        self.add_module(self.norm_name, norm2)
+        self.add_module(self.norm2_name, norm2)
         self.mlp = Mlp(out_channels, mlp_ratio=mlp_ratio, drop=drop)
         self.mlp_path_dropout = DropPath(path_dropout)
 
@@ -279,6 +279,7 @@ class NextViT(BaseModule):
                  drop=0,
                  strides=[1, 2, 2, 2],
                  sr_ratios=[8, 4, 2, 1],
+                 out_indices=(0, 1, 2, 3),
                  head_dim=32,
                  mix_block_ratio=0.75,
                  use_checkpoint=False,
@@ -293,6 +294,7 @@ class NextViT(BaseModule):
         self.frozen_stages = frozen_stages
         self.with_extra_norm = with_extra_norm
         self.norm_eval = norm_eval
+        self.out_indices = out_indices
         self.stage_out_channels = [[96] * (depths[0]),
                                    [192] * (depths[1] - 1) + [256],
                                    [384, 384, 384, 384, 512] * (depths[2] // 5),
@@ -398,7 +400,8 @@ class NextViT(BaseModule):
                         x = self.extra_norm_list[stage_id](x)
                     else:
                         x = self.norm(x)
-                outputs.append(x)
+                if stage_id in self.out_indices:
+                    outputs.append(x)
                 stage_id += 1
 
         return outputs
