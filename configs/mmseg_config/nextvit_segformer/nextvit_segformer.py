@@ -2,7 +2,7 @@ _base_ = [
     '../_base_/datasets/datasets_iter.py',
     '../_base_/default_runtime_seg_iter.py', '../_base_/schedules/schedule_40k.py'
 ]
-num_classes = 2
+num_classes = 7
 crop_size = (512, 512)
 norm_cfg = dict(type='SyncBN', requires_grad=True)
 data_preprocessor = dict(
@@ -17,12 +17,14 @@ model = dict(
     type='EncoderDecoder_Plus',
     # pretrained='./model_data/mit_b1.pth',
     data_preprocessor=data_preprocessor,
-    backbone=dict(type='nextvit_small',
+    backbone=dict(type='NextViT',
+                  stem_chs=[64, 32, 64],
+                  depths=[3, 4, 10, 3],
+                  out_indices=(0, 1, 2, 3),
+                  path_dropout=0.2,
                   frozen_stages=-1,
                   norm_eval=False,
                   with_extra_norm=True,
-                  norm_cfg=norm_cfg,
-                  resume='../model_data/nextvit_small_in1k_224.pth',
                   ),
     decode_head=dict(
                      type='SegformerHead',
