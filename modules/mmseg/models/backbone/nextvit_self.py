@@ -404,4 +404,4 @@ class NextViT(BaseModule):
                     outputs.append(x)
                 stage_id += 1
 
-        return outputs
+        return tuple(outputs)
