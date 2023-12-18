@@ -279,6 +279,7 @@ class NextViT(BaseModule):
                  drop=0,
                  strides=[1, 2, 2, 2],
                  sr_ratios=[8, 4, 2, 1],
+                 out_indices=(0, 1, 2, 3),
                  head_dim=32,
                  mix_block_ratio=0.75,
                  use_checkpoint=False,
@@ -293,6 +294,7 @@ class NextViT(BaseModule):
         self.frozen_stages = frozen_stages
         self.with_extra_norm = with_extra_norm
         self.norm_eval = norm_eval
+        self.out_indices = out_indices
         self.stage_out_channels = [[96] * (depths[0]),
                                    [192] * (depths[1] - 1) + [256],
                                    [384, 384, 384, 384, 512] * (depths[2] // 5),
@@ -398,7 +400,8 @@ class NextViT(BaseModule):
                         x = self.extra_norm_list[stage_id](x)
                     else:
                         x = self.norm(x)
-                outputs.append(x)
+                if stage_id in self.out_indices:
+                    outputs.append(x)
                 stage_id += 1
 
         return outputs
