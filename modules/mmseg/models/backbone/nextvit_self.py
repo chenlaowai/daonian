@@ -221,7 +221,7 @@ class NTB(BaseModule):
 
         self.patch_embed = PatchEmbed(in_channels, self.mhsa_out_channels, stride)
         self.norm1_name, norm1 = build_norm_layer(norm_cfg, self.mhsa_out_channels, postfix=1)
-        self.add_module(self.norm_name, norm1)
+        self.add_module(self.norm1_name, norm1)
         self.e_mhsa = E_MHSA(self.mhsa_out_channels, head_dim=head_dim, sr_ratio=sr_ratio, attn_drop=attn_drop, proj_drop=drop)
         self.mhsa_path_dropout = DropPath(path_dropout * mix_block_ratio)
 
@@ -230,7 +230,7 @@ class NTB(BaseModule):
         self.mhca_path_dropout = DropPath(path_dropout * (1 - mix_block_ratio))
 
         self.norm2_name, norm2 = build_norm_layer(norm_cfg, out_channels, postfix=2)
-        self.add_module(self.norm_name, norm2)
+        self.add_module(self.norm2_name, norm2)
         self.mlp = Mlp(out_channels, mlp_ratio=mlp_ratio, drop=drop)
         self.mlp_path_dropout = DropPath(path_dropout)
 
