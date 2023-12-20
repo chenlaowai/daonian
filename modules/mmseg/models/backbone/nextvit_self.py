@@ -405,3 +405,21 @@ class NextViT(BaseModule):
                 stage_id += 1
 
         return tuple(outputs)
+
+class nextvit_small(NextViT):
+    def __init__(self, resume='', **kwargs):
+        super(nextvit_small, self).__init__(
+            stem_chs=[64, 32, 64], depths=[3, 4, 10, 3], path_dropout=0.2, resume=resume, **kwargs
+        )
+
+class nextvit_base(NextViT):
+    def __init__(self, resume='', **kwargs):
+        super(nextvit_base, self).__init__(
+            stem_chs=[64, 32, 64], depths=[3, 4, 20, 3], path_dropout=0.2, resume=resume, **kwargs
+        )
+
+class nextvit_large(NextViT):
+    def __init__(self, resume='', **kwargs):
+        super(nextvit_large, self).__init__(
+            stem_chs=[64, 32, 64], depths=[3, 4, 30, 3], path_dropout=0.2, resume=resume, **kwargs
+        )

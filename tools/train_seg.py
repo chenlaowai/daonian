@@ -48,7 +48,8 @@ def parse_args():
     # of `--local_rank`.
     parser.add_argument('--local_rank', '--local-rank', type=int, default=0)
     # args = parser.parse_args()
-    args = parser.parse_args("../configs/mmseg_config/nextvit_segformer/nextvit_segformer.py".split())
+    args = parser.parse_args("../configs/mmseg_config/bssnet/bssnet-t_offical.py".split())
+    # args = parser.parse_args("../configs/mmseg_config/nextvit_segformer/nextvit_segformer.py".split())
     # args = parser.parse_args("../configs/mmseg_config/deeplabv3plus/deeplabv3plus_r18_40k.py".split())
     if 'LOCAL_RANK' not in os.environ:
         os.environ['LOCAL_RANK'] = str(args.local_rank)
