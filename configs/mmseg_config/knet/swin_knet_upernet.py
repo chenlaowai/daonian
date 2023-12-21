@@ -1,6 +1,6 @@
 _base_ = [
-    '../_base_/datasets/ade20k.py', '../_base_/default_runtime.py',
-    '../_base_/schedules/schedule_80k.py'
+    '../_base_/datasets/datasets_iter.py',
+    '../_base_/default_runtime_seg_iter.py', '../_base_/schedules/schedule_40k.py'
 ]
 crop_size = (512, 512)
 data_preprocessor = dict(
