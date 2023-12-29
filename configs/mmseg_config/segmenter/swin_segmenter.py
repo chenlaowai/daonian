@@ -38,25 +38,20 @@ model = dict(
         act_cfg=dict(type='GELU'),
         norm_cfg=dict(type='LN', requires_grad=True),
         init_cfg=dict(type='Pretrained', checkpoint=pretrained)),
-    neck=dict(
-        type='FPN',
-        in_channels=[96, 192, 384, 768],
-        out_channels=256,
-        num_outs=4),
     decode_head=dict(
-        type='MPC_Head',
-        in_channels=[256, 256, 256, 256],
-        in_index=[0, 1, 2, 3],
-        feature_strides=[4, 8, 16, 32],
-        channels=128,
-        dropout_ratio=0.1,
+        type='SegmenterMaskTransformerHead',
+        in_channels=768,
+        channels=768,
         num_classes=7,
-        norm_cfg=dict(type='SyncBN', requires_grad=True),
-        align_corners=False,
+        num_layers=2,
+        num_heads=6,
+        embed_dims=768,
+        dropout_ratio=0.0,
         loss_decode=dict(
             type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
     train_cfg=dict(),
-    test_cfg=dict(mode='whole'))
+    test_cfg=dict(mode='whole')
+)
 
 optim_wrapper = dict(
     _delete_=True,

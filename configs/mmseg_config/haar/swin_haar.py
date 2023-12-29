@@ -2,61 +2,58 @@ _base_ = [
     '../_base_/datasets/datasets_iter.py',
     '../_base_/default_runtime_seg_iter.py', '../_base_/schedules/schedule_40k.py'
 ]
-
 crop_size = (512, 512)
+num_classes = 7
 norm_cfg = dict(type='SyncBN', requires_grad=True)
-depths=[2, 2, 6, 2]
+backbone_norm_cfg = dict(type='LN', requires_grad=True)
 data_preprocessor = dict(
     type='SegDataPreProcessor',
-    size=crop_size,
     mean=[123.675, 116.28, 103.53],
     std=[58.395, 57.12, 57.375],
     bgr_to_rgb=True,
     pad_val=0,
+    size=crop_size,
     seg_pad_val=255)
-pretrained = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/swin/swin_tiny_patch4_window7_224_20220317-1cdeb081.pth'  # noqa
-backbone_norm_cfg = dict(type='LN', requires_grad=True)
+checkpoint_file = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/swin/swin_tiny_patch4_window7_224_20220317-1cdeb081.pth'  # noqa
 model = dict(
     type='EncoderDecoder',
     data_preprocessor=data_preprocessor,
     backbone=dict(
-        type='SwinTransformer',
+        type='SwinTransformer_Haar',
+        pretrain_img_size=224,
         embed_dims=96,
-        depths=depths,
-        num_heads=[3, 6, 12, 24],
+        patch_size=4,
         window_size=7,
         mlp_ratio=4,
+        depths=[2, 2, 6, 2],
+        num_heads=[3, 6, 12, 24],
+        strides=(4, 2, 2, 2),
+        out_indices=(0, 1, 2, 3),
         qkv_bias=True,
         qk_scale=None,
+        patch_norm=True,
         drop_rate=0.,
         attn_drop_rate=0.,
         drop_path_rate=0.3,
-        patch_norm=True,
-        out_indices=(0, 1, 2, 3),
-        with_cp=False,
-        frozen_stages=-1,
+        use_abs_pos_embed=False,
         act_cfg=dict(type='GELU'),
-        norm_cfg=dict(type='LN', requires_grad=True),
-        init_cfg=dict(type='Pretrained', checkpoint=pretrained)),
-    neck=dict(
-        type='FPN',
-        in_channels=[96, 192, 384, 768],
-        out_channels=256,
-        num_outs=4),
+        norm_cfg=backbone_norm_cfg,
+        init_cfg=dict(type='Pretrained', checkpoint=checkpoint_file)),
     decode_head=dict(
-        type='MPC_Head',
-        in_channels=[256, 256, 256, 256],
+        type='SegformerHead',
+        in_channels=[96, 192, 384, 768],
         in_index=[0, 1, 2, 3],
-        feature_strides=[4, 8, 16, 32],
-        channels=128,
+        channels=512,
         dropout_ratio=0.1,
-        num_classes=7,
-        norm_cfg=dict(type='SyncBN', requires_grad=True),
+        num_classes=num_classes,
+        norm_cfg=norm_cfg,
         align_corners=False,
         loss_decode=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
+            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)
+    ),
     train_cfg=dict(),
-    test_cfg=dict(mode='whole'))
+    test_cfg=dict(mode='whole')
+)
 
 optim_wrapper = dict(
     _delete_=True,
@@ -84,13 +81,18 @@ param_scheduler = [
         eta_min=0.0,
         power=1.0,
         begin=1500,
-        end=120000,
+        end=40000,
         by_epoch=False,
     )
 ]
 
+# By default, models are trained on 8 GPUs with 2 images per GPU
+train_dataloader = dict(batch_size=2)
+val_dataloader = dict(batch_size=1)
+test_dataloader = val_dataloader
+
 train_cfg = dict(
-    type='IterBasedTrainLoop', max_iters=120000, val_interval=1000)
+    type='IterBasedTrainLoop', max_iters=40000, val_interval=100)
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
 default_hooks = dict(

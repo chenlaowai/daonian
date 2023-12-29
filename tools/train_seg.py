@@ -48,9 +48,9 @@ def parse_args():
     # of `--local_rank`.
     parser.add_argument('--local_rank', '--local-rank', type=int, default=0)
     # args = parser.parse_args()
-    # args = parser.parse_args("../configs/mmseg_config/mpcnet/mpc_swin.py".split())
+    args = parser.parse_args("../configs/mmseg_config/haar/swin_haar.py".split())
     # args = parser.parse_args("../configs/mmseg_config/nextvit_segformer/nextvit_segformer.py".split())
-    args = parser.parse_args("../configs/mmseg_config/swin_upernet/swint_upernet.py".split())
+    # args = parser.parse_args("../configs/mmseg_config/maskformer/swint_upernet_maskformer.py".split())
     if 'LOCAL_RANK' not in os.environ:
         os.environ['LOCAL_RANK'] = str(args.local_rank)
 
