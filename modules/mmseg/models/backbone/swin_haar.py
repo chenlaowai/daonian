@@ -25,7 +25,7 @@ from pytorch_wavelets import DWTForward, DTCWTInverse
 class ConvBNReLU(BaseModule):
     def __init__(self, in_channels, out_channels, kernel_size, stride, groups=1, conv_cfg=None, norm_cfg=dict(type='BN2d'), init_cfg=None):
         super().__init__(init_cfg)
-        self.conv = build_conv_layer(conv_cfg, in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=1, groups=groups, bias=False)
+        self.conv = build_conv_layer(conv_cfg, in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=0, groups=groups, bias=False)
         self.norm_name, norm = build_norm_layer(norm_cfg, out_channels)
         self.add_module(self.norm_name, norm)
         self.act = nn.ReLU(inplace=True)
@@ -784,39 +784,43 @@ class SwinTransformer_Haar(BaseModule):
                                                              2).contiguous()
                 outs.append(out)
 
-        outs_haar = []
-        # haar*2
-        x_haar_l, x_haar_h = self.haar(x_haar)
-        x_haar_l, x_haar_h = self.haar(x_haar_l)
+        if self.training:
+            # 运用小波变换进行训练监督
+            outs_haar = []
+            # haar*2
+            x_haar_l, x_haar_h = self.haar(x_haar)
+            x_haar_l, x_haar_h = self.haar(x_haar_l)
 
-        # 论文中的O(h)算子
-        x_haar_h_0, x_haar_h_1, x_haar_h_2 = x_haar_h[0][:, :, 0, :, :], x_haar_h[0][:, :, 1, :, :], x_haar_h[0][:, :,
-                                                                                                     2, :, :]
-        ham_0 = torch.cat([x_haar_h_0, x_haar_h_1, x_haar_h_2], dim=1)
-        outs_haar.append(ham_0)
+            # 论文中的O(h)算子
+            x_haar_h_0, x_haar_h_1, x_haar_h_2 = x_haar_h[0][:, :, 0, :, :], x_haar_h[0][:, :, 1, :, :], x_haar_h[0][:, :,
+                                                                                                         2, :, :]
+            ham_0 = torch.cat([x_haar_h_0, x_haar_h_1, x_haar_h_2], dim=1)
+            outs_haar.append(ham_0)
 
-        x_haar_l, x_haar_h = self.haar(x_haar_l)
-        x_haar_h_0, x_haar_h_1, x_haar_h_2 = x_haar_h[0][:, :, 0, :, :], x_haar_h[0][:, :, 1, :, :], x_haar_h[0][:, :,
-                                                                                                     2, :, :]
-        ham_1 = torch.cat([x_haar_h_0, x_haar_h_1, x_haar_h_2], dim=1)
-        outs_haar.append(ham_1)
+            x_haar_l, x_haar_h = self.haar(x_haar_l)
+            x_haar_h_0, x_haar_h_1, x_haar_h_2 = x_haar_h[0][:, :, 0, :, :], x_haar_h[0][:, :, 1, :, :], x_haar_h[0][:, :,
+                                                                                                         2, :, :]
+            ham_1 = torch.cat([x_haar_h_0, x_haar_h_1, x_haar_h_2], dim=1)
+            outs_haar.append(ham_1)
 
-        x_haar_l, x_haar_h = self.haar(x_haar_l)
-        x_haar_h_0, x_haar_h_1, x_haar_h_2 = x_haar_h[0][:, :, 0, :, :], x_haar_h[0][:, :, 1, :, :], x_haar_h[0][:, :,
-                                                                                                     2, :, :]
-        ham_2 = torch.cat([x_haar_h_0, x_haar_h_1, x_haar_h_2], dim=1)
-        outs_haar.append(ham_2)
+            x_haar_l, x_haar_h = self.haar(x_haar_l)
+            x_haar_h_0, x_haar_h_1, x_haar_h_2 = x_haar_h[0][:, :, 0, :, :], x_haar_h[0][:, :, 1, :, :], x_haar_h[0][:, :,
+                                                                                                         2, :, :]
+            ham_2 = torch.cat([x_haar_h_0, x_haar_h_1, x_haar_h_2], dim=1)
+            outs_haar.append(ham_2)
 
-        x_haar_l, x_haar_h = self.haar(x_haar_l)
-        x_haar_h_0, x_haar_h_1, x_haar_h_2 = x_haar_h[0][:, :, 0, :, :], x_haar_h[0][:, :, 1, :, :], x_haar_h[0][:, :,
-                                                                                                     2, :, :]
-        ham_3 = torch.cat([x_haar_h_0, x_haar_h_1, x_haar_h_2], dim=1)
-        outs_haar.append(ham_3)
+            x_haar_l, x_haar_h = self.haar(x_haar_l)
+            x_haar_h_0, x_haar_h_1, x_haar_h_2 = x_haar_h[0][:, :, 0, :, :], x_haar_h[0][:, :, 1, :, :], x_haar_h[0][:, :,
+                                                                                                         2, :, :]
+            ham_3 = torch.cat([x_haar_h_0, x_haar_h_1, x_haar_h_2], dim=1)
+            outs_haar.append(ham_3)
 
-        # 论文中的DHP模块
-        outs_dhp = []
-        for i in range(4):
-            out_dhp = self.dhps[i](outs[i])
-            outs_dhp.append(out_dhp)
+            # 论文中的DHP模块
+            outs_dhp = []
+            for i in range(4):
+                out_dhp = self.dhps[i](outs[i])
+                outs_dhp.append(out_dhp)
 
-        return outs, outs_haar, outs_dhp
+            return [outs, outs_haar, outs_dhp]
+        else:
+            return outs

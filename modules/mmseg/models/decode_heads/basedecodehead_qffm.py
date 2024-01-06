@@ -5,6 +5,7 @@ from typing import List, Tuple
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from mmengine.model import BaseModule
 from torch import Tensor
 
@@ -82,8 +83,8 @@ class BaseDecodeHead_QFFM(BaseModule, metaclass=ABCMeta):
     """
 
     def __init__(self,
-                 in_channels,
-                 channels,
+                 in_channels=[96, 192, 384, 768],
+                 channels=96,
                  *,
                  num_classes,
                  out_channels=None,
@@ -92,9 +93,14 @@ class BaseDecodeHead_QFFM(BaseModule, metaclass=ABCMeta):
                  conv_cfg=None,
                  norm_cfg=None,
                  act_cfg=dict(type='ReLU'),
-                 in_index=-1,
+                 in_index=[0, 1, 2, 3],
                  input_transform=None,
                  loss_decode=dict(
+                     type='CrossEntropyLoss',
+                     use_sigmoid=False,
+                     loss_weight=1.0),
+                 loss_haar=dict(type='MSELoss', loss_weight=0.5),
+                 loss_aux=dict(
                      type='CrossEntropyLoss',
                      use_sigmoid=False,
                      loss_weight=1.0),
@@ -105,6 +111,7 @@ class BaseDecodeHead_QFFM(BaseModule, metaclass=ABCMeta):
                      type='Normal', std=0.01, override=dict(name='conv_seg'))):
         super().__init__(init_cfg)
         self._init_inputs(in_channels, in_index, input_transform)
+        self.stage_num = len(self.in_channels)
         self.channels = channels
         self.dropout_ratio = dropout_ratio
         self.conv_cfg = conv_cfg
@@ -148,6 +155,26 @@ class BaseDecodeHead_QFFM(BaseModule, metaclass=ABCMeta):
         else:
             raise TypeError(f'loss_decode must be a dict or sequence of dict,\
                 but got {type(loss_decode)}')
+
+        if isinstance(loss_haar, dict):
+            self.loss_haar = build_loss(loss_haar)
+        elif isinstance(loss_haar, (list, tuple)):
+            self.loss_haar = nn.ModuleList()
+            for loss in loss_haar:
+                self.loss_haar.append(build_loss(loss))
+        else:
+            raise TypeError(f'loss_decode must be a dict or sequence of dict,\
+                but got {type(loss_haar)}')
+
+        if isinstance(loss_aux, dict):
+            self.loss_aux = build_loss(loss_aux)
+        elif isinstance(loss_aux, (list, tuple)):
+            self.loss_aux = nn.ModuleList()
+            for loss in loss_aux:
+                self.loss_aux.append(build_loss(loss))
+        else:
+            raise TypeError(f'loss_decode must be a dict or sequence of dict,\
+                but got {type(loss_aux)}')
 
         if sampler is not None:
             self.sampler = build_pixel_sampler(sampler, context=self)
@@ -258,8 +285,8 @@ class BaseDecodeHead_QFFM(BaseModule, metaclass=ABCMeta):
         Returns:
             dict[str, Tensor]: a dictionary of loss components
         """
-        seg_logits = self.forward(inputs)
-        losses = self.loss_by_feat(seg_logits, batch_data_samples)
+        out, outs_haar, outs_dhp, outs_last = self.forward(inputs)
+        losses = self.loss_by_feat(out, outs_haar, outs_dhp, outs_last, batch_data_samples)
         return losses
 
     def predict(self, inputs: Tuple[Tensor], batch_img_metas: List[dict],
@@ -288,12 +315,12 @@ class BaseDecodeHead_QFFM(BaseModule, metaclass=ABCMeta):
         ]
         return torch.stack(gt_semantic_segs, dim=0)
 
-    def loss_by_feat(self, seg_logits: Tensor,
+    def loss_by_feat(self, seg_out: Tensor, outs_haar: List, outs_dhp: List, outs_last: Tensor,
                      batch_data_samples: SampleList) -> dict:
         """Compute segmentation loss.
 
         Args:
-            seg_logits (Tensor): The output from decode head forward function.
+            seg_out (Tensor): The output from decode head forward function.
             batch_data_samples (List[:obj:`SegDataSample`]): The seg
                 data samples. It usually includes information such
                 as `metainfo` and `gt_sem_seg`.
@@ -304,13 +331,19 @@ class BaseDecodeHead_QFFM(BaseModule, metaclass=ABCMeta):
 
         seg_label = self._stack_batch_gt(batch_data_samples)
         loss = dict()
-        seg_logits = resize(
-            input=seg_logits,
+        seg_out = resize(
+            input=seg_out,
             size=seg_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
+        seg_label_aux = resize(
+            input=seg_label.to(dtype=torch.float),
+            size=outs_last.shape[2:],
+            mode='bilinear',
+            align_corners=False).squeeze(1)
+        seg_label_aux = seg_label_aux.to(dtype=torch.int64)
         if self.sampler is not None:
-            seg_weight = self.sampler.sample(seg_logits, seg_label)
+            seg_weight = self.sampler.sample(seg_out, seg_label)
         else:
             seg_weight = None
         seg_label = seg_label.squeeze(1)
@@ -322,19 +355,56 @@ class BaseDecodeHead_QFFM(BaseModule, metaclass=ABCMeta):
         for loss_decode in losses_decode:
             if loss_decode.loss_name not in loss:
                 loss[loss_decode.loss_name] = loss_decode(
-                    seg_logits,
+                    seg_out,
                     seg_label,
                     weight=seg_weight,
                     ignore_index=self.ignore_index)
             else:
                 loss[loss_decode.loss_name] += loss_decode(
-                    seg_logits,
+                    seg_out,
                     seg_label,
                     weight=seg_weight,
                     ignore_index=self.ignore_index)
 
+        if not isinstance(self.loss_haar, nn.ModuleList):
+            losses_haar = [self.loss_haar]
+        else:
+            losses_haar = self.loss_haar
+        for i in range(self.stage_num):
+            for loss_haar in losses_haar:
+                if loss_haar.loss_name not in loss:
+                    loss[loss_haar.loss_name] = loss_haar(
+                        outs_dhp[i],
+                        outs_haar[i],
+                        weight=seg_weight,
+                        ignore_index=self.ignore_index)
+                else:
+                    loss[loss_haar.loss_name] += loss_haar(
+                        outs_dhp[i],
+                        outs_haar[i],
+                        weight=seg_weight,
+                        ignore_index=self.ignore_index)
+
+        if not isinstance(self.loss_aux, nn.ModuleList):
+            losses_aux = [self.loss_aux]
+        else:
+            losses_aux = self.loss_aux
+        for loss_aux in losses_aux:
+            if loss_aux.loss_name not in loss:
+                loss[loss_aux.loss_name] = loss_aux(
+                    outs_last,
+                    seg_label_aux,
+                    weight=seg_weight,
+                    ignore_index=self.ignore_index)
+            else:
+                loss[loss_aux.loss_name] += loss_aux(
+                    outs_last,
+                    seg_label_aux,
+                    weight=seg_weight,
+                    ignore_index=self.ignore_index)
+
         loss['acc_seg'] = accuracy(
-            seg_logits, seg_label, ignore_index=self.ignore_index)
+            seg_out, seg_label, ignore_index=self.ignore_index)
         return loss
 
     def predict_by_feat(self, seg_logits: Tensor,

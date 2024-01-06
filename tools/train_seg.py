@@ -45,12 +45,12 @@ def parse_args():
         help='job launcher')
     # When using PyTorch version >= 2.0.0, the `torch.distributed.launch`
     # will pass the `--local-rank` parameter to `tools/train.py` instead
-    # of `--local_rank`.
+    # of `--local_rank`.2
     parser.add_argument('--local_rank', '--local-rank', type=int, default=0)
     # args = parser.parse_args()
     args = parser.parse_args("../configs/mmseg_config/haar/swin_haar.py".split())
     # args = parser.parse_args("../configs/mmseg_config/nextvit_segformer/nextvit_segformer.py".split())
-    # args = parser.parse_args("../configs/mmseg_config/maskformer/swint_upernet_maskformer.py".split())
+    # args = parser.parse_args("../configs/mmseg_config/segmenter/swin_segmenter.py".split())
     if 'LOCAL_RANK' not in os.environ:
         os.environ['LOCAL_RANK'] = str(args.local_rank)
 

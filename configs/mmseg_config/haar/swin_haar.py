@@ -40,17 +40,36 @@ model = dict(
         norm_cfg=backbone_norm_cfg,
         init_cfg=dict(type='Pretrained', checkpoint=checkpoint_file)),
     decode_head=dict(
-        type='SegformerHead',
+        type='QFFMHead',
         in_channels=[96, 192, 384, 768],
+        channels=96,
         in_index=[0, 1, 2, 3],
-        channels=512,
         dropout_ratio=0.1,
         num_classes=num_classes,
         norm_cfg=norm_cfg,
         align_corners=False,
         loss_decode=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)
+            type='CrossEntropyLoss',
+            use_sigmoid=False,
+            loss_weight=1.0),
+        loss_haar=dict(type='MSELoss', loss_weight=0.4),
+        loss_aux=dict(
+            type='CrossEntropyLoss',
+            use_sigmoid=False,
+            loss_weight=0.1),
     ),
+    # decode_head=dict(
+    #     type='TextHead',
+    #     in_channels=768,
+    #     channels=768,
+    #     num_classes=7,
+    #     num_layers=2,
+    #     num_heads=6,
+    #     embed_dims=768,
+    #     dropout_ratio=0.0,
+    #     loss_decode=[
+    #         dict(type='CrossEntropyLoss', loss_name='loss_ce', use_sigmoid=False, loss_weight=1.0, ),
+    #         dict(type='LovaszLoss', loss_name='loss_lovasz', reduction='none', loss_weight=1.0, )]),
     train_cfg=dict(),
     test_cfg=dict(mode='whole')
 )
@@ -81,7 +100,7 @@ param_scheduler = [
         eta_min=0.0,
         power=1.0,
         begin=1500,
-        end=40000,
+        end=80000,
         by_epoch=False,
     )
 ]
@@ -92,7 +111,7 @@ val_dataloader = dict(batch_size=1)
 test_dataloader = val_dataloader
 
 train_cfg = dict(
-    type='IterBasedTrainLoop', max_iters=40000, val_interval=100)
+    type='IterBasedTrainLoop', max_iters=80000, val_interval=100)
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
 default_hooks = dict(

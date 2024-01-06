@@ -47,8 +47,9 @@ model = dict(
         num_heads=6,
         embed_dims=768,
         dropout_ratio=0.0,
-        loss_decode=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
+        loss_decode=[
+            dict(type='CrossEntropyLoss', loss_name='loss_ce', use_sigmoid=False, loss_weight=1.0, ),
+            dict(type='LovaszLoss', loss_name='loss_lovasz', reduction='none', loss_weight=1.0, )]),
     train_cfg=dict(),
     test_cfg=dict(mode='whole')
 )
