@@ -111,7 +111,7 @@ val_dataloader = dict(batch_size=1)
 test_dataloader = val_dataloader
 
 train_cfg = dict(
-    type='IterBasedTrainLoop', max_iters=80000, val_interval=100)
+    type='IterBasedTrainLoop', max_iters=80000, val_interval=1000)
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
 default_hooks = dict(
