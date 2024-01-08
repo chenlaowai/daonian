@@ -4,7 +4,7 @@ _base_ = [
 ]
 crop_size = (512, 512)
 num_classes = 7
-norm_cfg = dict(type='SyncBN', requires_grad=True)
+norm_cfg = dict(type='BN', requires_grad=True)
 backbone_norm_cfg = dict(type='LN', requires_grad=True)
 data_preprocessor = dict(
     type='SegDataPreProcessor',
@@ -43,6 +43,7 @@ model = dict(
         type='QFFMHead',
         in_channels=[96, 192, 384, 768],
         channels=96,
+        feature_strides=[4, 8, 16, 32],
         in_index=[0, 1, 2, 3],
         dropout_ratio=0.1,
         num_classes=num_classes,
@@ -52,7 +53,7 @@ model = dict(
             type='CrossEntropyLoss',
             use_sigmoid=False,
             loss_weight=1.0),
-        loss_haar=dict(type='MSELoss', loss_weight=0.4),
+        loss_haar=dict(type='MSELoss', loss_weight=0.1),
         loss_aux=dict(
             type='CrossEntropyLoss',
             use_sigmoid=False,

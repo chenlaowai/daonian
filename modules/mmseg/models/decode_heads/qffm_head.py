@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
 import torch.nn as nn
+import numpy as np
 from mmcv.cnn import ConvModule
 from mmcv.cnn import build_conv_layer, build_norm_layer
 from mmengine.model import ModuleList, BaseModule
@@ -8,7 +9,7 @@ from mmengine.model.weight_init import (constant_init, trunc_normal_,
                                         trunc_normal_init)
 
 from mmseg.registry import MODELS
-from mmseg.models.utils import resize
+from mmseg.models.utils import Upsample, resize
 
 from .basedecodehead_qffm import BaseDecodeHead_QFFM
 
@@ -105,19 +106,19 @@ class QFFMLayer(BaseModule):
 
         super().__init__(init_cfg=init_cfg)
         self.align_corners = align_corners
-        self.up_channel = ConvBNReLU(high_channel, low_channel, kernel_size=1, stride=1)
+        # self.up_channel = ConvBNReLU(high_channel, low_channel, kernel_size=1, stride=1)
         self.qffmblock_hh = QFFMBlock(low_channel)
         self.qffmblock_ll = QFFMBlock(low_channel)
         self.qffmblock_hl = QFFMBlock(low_channel)
 
     def forward(self, out_h, out_l):
-        out_h = resize(
-            input=out_h,
-            size=out_l.shape[2:],
-            mode='bilinear',
-            align_corners=self.align_corners)
-
-        out_h = self.up_channel(out_h)
+        # out_h = resize(
+        #     input=out_h,
+        #     size=out_l.shape[2:],
+        #     mode='bilinear',
+        #     align_corners=self.align_corners)
+        #
+        # out_h = self.up_channel(out_h)
 
         qffmblock_hh = self.qffmblock_hh(out_h, out_h)
         qffmblock_ll = self.qffmblock_ll(out_l, out_l)
@@ -135,9 +136,12 @@ class QFFMHead(BaseDecodeHead_QFFM):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, feature_strides,
+                 init_std=0.02,
+                 **kwargs):
         super().__init__(input_transform='multiple_select', **kwargs)
 
+        self.init_std = init_std
         self.qffmlayers = ModuleList()
         for i in range(self.stage_num - 1):
             qffmlayer = QFFMLayer(self.in_channels[self.stage_num - 1 - i], self.in_channels[self.stage_num - 2 - i])
@@ -145,12 +149,43 @@ class QFFMHead(BaseDecodeHead_QFFM):
 
         self.aux_conv = ConvBNReLU(self.in_channels[self.stage_num - 1], self.out_channels, kernel_size=1, stride=1)
 
-    # def init_weights(self):
-    #     for n, m in self.named_modules():
-    #         if isinstance(m, nn.Linear):
-    #             trunc_normal_init(m, std=self.init_std, bias=0)
-    #         elif isinstance(m, nn.LayerNorm):
-    #             constant_init(m, val=1.0, bias=0.0)
+        assert len(feature_strides) == len(self.in_channels)
+        assert min(feature_strides) == feature_strides[0]
+        self.feature_strides = feature_strides
+        self.scale_heads = nn.ModuleList()
+        for i in range(len(feature_strides)):
+            if i == 0:
+                out_channel = self.channels
+            else:
+                out_channel = self.in_channels[i - 1]
+            head_length = max(
+                1,
+                int(np.log2(feature_strides[i]) - np.log2(feature_strides[0])))
+            scale_head = []
+            for k in range(head_length):
+                scale_head.append(
+                    ConvModule(
+                        self.in_channels[i] if k == 0 else out_channel,
+                        out_channel,
+                        3,
+                        padding=1,
+                        conv_cfg=self.conv_cfg,
+                        norm_cfg=self.norm_cfg,
+                        act_cfg=self.act_cfg))
+                if feature_strides[i] != feature_strides[0]:
+                    scale_head.append(
+                        Upsample(
+                            scale_factor=2,
+                            mode='bilinear',
+                            align_corners=self.align_corners))
+            self.scale_heads.append(nn.Sequential(*scale_head))
+
+    def init_weights(self):
+        for n, m in self.named_modules():
+            if isinstance(m, nn.Linear):
+                trunc_normal_init(m, std=self.init_std, bias=0)
+            elif isinstance(m, nn.LayerNorm):
+                constant_init(m, val=1.0, bias=0.0)
 
 
     def forward(self, inputs):
@@ -159,11 +194,19 @@ class QFFMHead(BaseDecodeHead_QFFM):
             input, outs_haar, outs_dhp = inputs[0], inputs[1], inputs[2]
         else:
             input = inputs
-        out = input[self.stage_num - 1]
-        for i in range(self.stage_num - 1):
-            out = self.qffmlayers[i](out, input[self.stage_num - 2 - i])
 
-        out = self.cls_seg(out)
+        high_feature = input[self.stage_num - 1]
+        for i in range(self.stage_num - 1):
+            high_feature = self.scale_heads[self.stage_num - 1 - i](high_feature)
+            low_feature = input[self.stage_num - 2 - i]
+            high_feature = resize(
+                high_feature,
+                size=low_feature.shape[2:],
+                mode='bilinear',
+                align_corners=self.align_corners)
+            high_feature = self.qffmlayers[i](high_feature, low_feature)
+
+        out = self.cls_seg(high_feature)
 
         outs_last = self.aux_conv(input[self.stage_num - 1])
 
