@@ -64,13 +64,13 @@ class QFFMBlock(BaseModule):
                  init_cfg=None):
 
         super().__init__(init_cfg=init_cfg)
-        self.QFFM_W = nn.Parameter(torch.randn((channel, 1)))
-        # self.QFFM_W = nn.Embedding(torch.randn((channel, 1)))
+        # self.QFFM_W = nn.Parameter(torch.randn((channel, 1)))
+        self.QFFM_W = nn.Embedding(channel, 1)
 
         self.se = SELayer(channel, reduction=16)
 
-    def init_weights(self):
-        trunc_normal_(self.QFFM_W, std=0.02)
+    # def init_weights(self):
+    #     trunc_normal_(self.QFFM_W, std=0.02)
 
     def forward(self, f_h, f_l):
         b_h, c_h, h_h, w_h = f_h.shape
