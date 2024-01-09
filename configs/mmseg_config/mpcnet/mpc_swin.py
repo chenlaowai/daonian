@@ -4,7 +4,7 @@ _base_ = [
 ]
 
 crop_size = (512, 512)
-norm_cfg = dict(type='SyncBN', requires_grad=True)
+norm_cfg = dict(type='BN', requires_grad=True)
 depths=[2, 2, 6, 2]
 data_preprocessor = dict(
     type='SegDataPreProcessor',
@@ -51,7 +51,7 @@ model = dict(
         channels=128,
         dropout_ratio=0.1,
         num_classes=7,
-        norm_cfg=dict(type='SyncBN', requires_grad=True),
+        norm_cfg=norm_cfg,
         align_corners=False,
         loss_decode=dict(
             type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),

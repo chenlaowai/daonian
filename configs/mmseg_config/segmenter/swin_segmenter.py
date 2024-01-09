@@ -47,25 +47,43 @@ model = dict(
         num_heads=6,
         embed_dims=768,
         dropout_ratio=0.0,
+        # loss_decode=dict(
+        #     type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
         loss_decode=[
-            dict(type='CrossEntropyLoss', loss_name='loss_ce', use_sigmoid=False, loss_weight=1.0, ),
-            dict(type='LovaszLoss', loss_name='loss_lovasz', reduction='none', loss_weight=1.0, )]),
+            dict(type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
+            # dict(type='CrossEntropyLoss', loss_name='lose_ce', use_sigmoid=False, loss_weight=1.0),
+            # dict(type='LovaszLoss', loss_name='lose_lovasz', reduction='none', loss_weight=1.0),
+            # dict(type='DiceLoss', loss_name='lose_dice', loss_weight=1.0)
+                    ]
+    ),
+
     train_cfg=dict(),
     test_cfg=dict(mode='whole')
 )
 
+optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0)
+optim_wrapper = dict(type='OptimWrapper', optimizer=optimizer, clip_grad=None)
+param_scheduler = [
+    dict(
+        type='PolyLR',
+        eta_min=1e-4,
+        power=0.9,
+        begin=0,
+        end=120000,
+        by_epoch=False)
+]
 optim_wrapper = dict(
     _delete_=True,
     type='OptimWrapper',
     optimizer=dict(type='AdamW', lr=0.00006, betas=(0.9, 0.999), weight_decay=0.01),
-    paramwise_cfg=dict(
-        custom_keys={
-            'pos_block': dict(decay_mult=0.),
-            'norm': dict(decay_mult=0.),
-            'head': dict(lr_mult=10.),
-            # 'bn': dict(decay_mult=0.0)
-        },
-    ),
+    # paramwise_cfg=dict(
+    #     custom_keys={
+    #         'pos_block': dict(decay_mult=0.),
+    #         'norm': dict(decay_mult=0.),
+    #         'head': dict(lr_mult=10.),
+    #         # 'bn': dict(decay_mult=0.0)
+    #     },
+    # ),
 )
 
 param_scheduler = [

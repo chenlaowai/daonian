@@ -52,12 +52,12 @@ model = dict(
         loss_decode=dict(
             type='CrossEntropyLoss',
             use_sigmoid=False,
-            loss_weight=1.0),
+            loss_weight=1),
         loss_haar=dict(type='MSELoss', loss_weight=0.1),
         loss_aux=dict(
             type='CrossEntropyLoss',
             use_sigmoid=False,
-            loss_weight=0.1),
+            loss_weight=0),
     ),
     # decode_head=dict(
     #     type='TextHead',

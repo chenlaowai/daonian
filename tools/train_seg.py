@@ -45,7 +45,7 @@ def parse_args():
         help='job launcher')
     # When using PyTorch version >= 2.0.0, the `torch.distributed.launch`
     # will pass the `--local-rank` parameter to `tools/train.py` instead
-    # of `--local_rank`.2
+    # of `--local_rank`.
     parser.add_argument('--local_rank', '--local-rank', type=int, default=0)
     # args = parser.parse_args()
     args = parser.parse_args("../configs/mmseg_config/haar/swin_haar.py".split())

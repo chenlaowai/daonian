@@ -69,7 +69,7 @@ def parse_args():
     # of `--local_rank`.
     parser.add_argument('--local_rank', '--local-rank', type=int, default=0)
     # args = parser.parse_args()
-    args = parser.parse_args("../configs/mmpre_config/nextvit/nextvit_small_8xb32_in1k.py".split())
+    args = parser.parse_args("../configs/mmpre_config/nextvit/nextvit_small_16xb64_in1k.py".split())
     if 'LOCAL_RANK' not in os.environ:
         os.environ['LOCAL_RANK'] = str(args.local_rank)
 

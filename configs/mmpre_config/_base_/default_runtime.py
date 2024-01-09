@@ -35,7 +35,8 @@ env_cfg = dict(
 )
 
 # set visualizer
-vis_backends = [dict(type='LocalVisBackend')]
+vis_backends = [dict(type='LocalVisBackend'),
+                dict(type='TensorboardVisBackend')]
 visualizer = dict(type='UniversalVisualizer', vis_backends=vis_backends)
 
 # set log level

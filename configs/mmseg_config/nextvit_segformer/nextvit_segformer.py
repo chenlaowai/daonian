@@ -14,7 +14,7 @@ data_preprocessor = dict(
     pad_val=0,
     seg_pad_val=255)
 model = dict(
-    type='EncoderDecoder_Plus',
+    type='EncoderDecoder',
     # pretrained='./model_data/mit_b1.pth',
     data_preprocessor=data_preprocessor,
     backbone=dict(type='NextViT',
@@ -25,6 +25,7 @@ model = dict(
                   frozen_stages=-1,
                   norm_eval=False,
                   with_extra_norm=True,
+                  init_cfg=dict(type='Pretrained', checkpoint='../model_data/nextvit_self_2.pth', prefix='backbone.'),
                   ),
     decode_head=dict(
                      type='SegformerHead',
@@ -68,7 +69,7 @@ param_scheduler = [
         eta_min=0.0,
         power=1.0,
         begin=1500,
-        end=40000,
+        end=80000,
         by_epoch=False,
     )
 ]
@@ -92,3 +93,16 @@ param_scheduler = [
 train_dataloader = dict(batch_size=2, num_workers=4)
 val_dataloader = dict(batch_size=1, num_workers=4)
 test_dataloader = val_dataloader
+
+train_cfg = dict(
+    type='IterBasedTrainLoop', max_iters=80000, val_interval=1000)
+val_cfg = dict(type='ValLoop')
+test_cfg = dict(type='TestLoop')
+default_hooks = dict(
+    timer=dict(type='IterTimerHook'),
+    logger=dict(type='LoggerHook', interval=100, log_metric_by_epoch=False),
+    param_scheduler=dict(type='ParamSchedulerHook'),
+    checkpoint=dict(
+        type='CheckpointHook', by_epoch=False, save_best='mIoU', interval=40000),
+    sampler_seed=dict(type='DistSamplerSeedHook'),
+    visualization=dict(type='SegVisualizationHook'))

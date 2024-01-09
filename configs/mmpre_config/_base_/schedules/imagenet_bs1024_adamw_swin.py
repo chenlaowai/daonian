@@ -26,7 +26,8 @@ param_scheduler = [
         by_epoch=True,
         end=20,
         # update by iter
-        convert_to_iter_based=True),
+        convert_to_iter_based=True
+    ),
     # main learning rate scheduler
     dict(type='CosineAnnealingLR', eta_min=1e-5, by_epoch=True, begin=20)
 ]
