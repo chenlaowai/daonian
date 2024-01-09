@@ -43,7 +43,7 @@ model = dict(
         type='QFFMHead',
         in_channels=[96, 192, 384, 768],
         channels=96,
-        feature_strides=[4, 8, 16, 32],
+        feature_strides=[4, 2, 2, 2],
         in_index=[0, 1, 2, 3],
         dropout_ratio=0.1,
         num_classes=num_classes,
@@ -52,7 +52,7 @@ model = dict(
         loss_decode=dict(
             type='CrossEntropyLoss',
             use_sigmoid=False,
-            loss_weight=1),
+            loss_weight=1.0),
         loss_haar=dict(type='MSELoss', loss_weight=0.1),
         loss_aux=dict(
             type='CrossEntropyLoss',

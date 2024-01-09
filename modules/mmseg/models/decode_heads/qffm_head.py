@@ -64,7 +64,7 @@ class QFFMBlock(BaseModule):
                  init_cfg=None):
 
         super().__init__(init_cfg=init_cfg)
-        self.QFFM_W = nn.Parameter(torch.zero((channel, 1)))
+        self.QFFM_W = nn.Parameter(torch.zeros((channel, 1)))
         # self.QFFM_W = nn.Embedding(channel, 1)
 
         self.se = SELayer(channel, reduction=16)
@@ -151,7 +151,7 @@ class QFFMHead(BaseDecodeHead_QFFM):
         self.aux_conv = ConvBNReLU(self.in_channels[self.stage_num - 1], self.out_channels, kernel_size=1, stride=1)
 
         assert len(feature_strides) == len(self.in_channels)
-        assert min(feature_strides) == feature_strides[0]
+        # assert min(feature_strides) == feature_strides[0]
         self.feature_strides = feature_strides
         self.scale_heads = nn.ModuleList()
         for i in range(len(feature_strides)):
@@ -207,6 +207,8 @@ class QFFMHead(BaseDecodeHead_QFFM):
                 align_corners=self.align_corners)
             # high_feature = self.qffmlayers[i](high_feature, low_feature)
             high_feature = high_feature + low_feature
+        high_feature = self.scale_heads[0](high_feature)
+
 
         out = self.cls_seg(high_feature)
 
