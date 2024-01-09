@@ -64,21 +64,21 @@ class QFFMBlock(BaseModule):
                  init_cfg=None):
 
         super().__init__(init_cfg=init_cfg)
-        # self.QFFM_W = nn.Parameter(torch.zero((channel, 1)))
-        self.QFFM_W = nn.Embedding(channel, 1)
+        self.QFFM_W = nn.Parameter(torch.zero((channel, 1)))
+        # self.QFFM_W = nn.Embedding(channel, 1)
 
         self.se = SELayer(channel, reduction=16)
 
-    # def init_weights(self):
-    #     trunc_normal_(self.QFFM_W, std=0.02)
+    def init_weights(self):
+        trunc_normal_(self.QFFM_W, std=0.02)
 
     def forward(self, f_h, f_l):
         b_h, c_h, h_h, w_h = f_h.shape
         b_l, c_l, h_l, w_l = f_l.shape
 
-        self.QFFM_W_weight = self.QFFM_W.weight
+        # self.QFFM_W_weight = self.QFFM_W.weight
         f_h = f_h.permute(0, 2, 3, 1).contiguous()
-        U = f_h @ self.QFFM_W_weight
+        U = f_h @ self.QFFM_W
         U = U.permute(0, 3, 1, 2).contiguous().view(b_h, -1, h_l * w_l)
 
         V = f_l.permute(0, 2, 3, 1).contiguous().view(b_l, h_l * w_l, c_l)
