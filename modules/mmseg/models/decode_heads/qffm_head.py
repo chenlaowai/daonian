@@ -205,7 +205,8 @@ class QFFMHead(BaseDecodeHead_QFFM):
                 size=low_feature.shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners)
-            high_feature = self.qffmlayers[i](high_feature, low_feature)
+            # high_feature = self.qffmlayers[i](high_feature, low_feature)
+            high_feature = high_feature + low_feature
 
         out = self.cls_seg(high_feature)
 
